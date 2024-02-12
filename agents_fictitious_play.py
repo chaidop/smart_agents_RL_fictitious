@@ -50,7 +50,7 @@ import pandas as pd
 
 def best_response(actions, exp_utilities):
     strat = np.argmax(exp_utilities)
-    print('The best action is ', actions[np.argmax(exp_utilities)])
+    #print('The best action is ', actions[np.argmax(exp_utilities)])
     return strat
 
 # for mixed strategies
@@ -67,21 +67,15 @@ def compute_expect_utility(actions, belief, payoff_matrix):
     for action in range(len(actions)):
         # (action, H), (action,T)
         exp_ut.append(payoff_matrix[action][0]*belief[0] + payoff_matrix[action][1]*belief[1])
-    print("util", belief, payoff_matrix)
-    print("utilities are ", exp_ut)
     return best_response(actions, exp_ut)
     
 def update_beliefs(actions, action_count):
-    print('----update ----')
     #total = sum(action_count)
     new_belief = []
     for action in range(len(actions)):
-        print(action)
         new_belief.append(action_count[action]/sum(action_count))
-        print(new_belief)
     # return new belief
     new_belief = np.array(new_belief)
-    print('------')
     return new_belief
 
 """
@@ -114,7 +108,6 @@ def matching_pennies_init():
     payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
     payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
-    print("PAYOFF MATRICES", payoff_matrices )
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
@@ -129,7 +122,7 @@ def matching_pennies_init():
     # empirical_distribution
     # P(a) = w(a)/SUM(w(a')), probability of opponent playing action a and a' all actions (includiing a)
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
-    beliefs = np.array(([1.5, 2], [2, 1.5]))
+    #beliefs = np.array(([1.5, 2], [2, 1.5]))
 
     return actions, payoff_matrices, action_count, beliefs
 
@@ -140,7 +133,6 @@ def prisoners_dillema_init():
     payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
     payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
-    print("PAYOFF MATRICES", payoff_matrices )
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
@@ -166,7 +158,6 @@ def battle_of_sexes_init():
     payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
     payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
-    print("PAYOFF MATRICES", payoff_matrices )
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
@@ -185,24 +176,19 @@ def battle_of_sexes_init():
 
     return actions, payoff_matrices, action_count, beliefs
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("game", help="choose which game to play. Range [1-3]", required=False)
-    args = parser.parse_args()
-    game = args.game
-
-    # check if game option given, default matching pennies
-    if game is None:
-        game == 1
-
-    if game == 1:
-        actions, payoff_matrices, action_count, beliefs = matching_pennies_init()
-    elif game == 2:
+def main(game):
+    if game == 2:
         actions, payoff_matrices, action_count, beliefs = prisoners_dillema_init()
+        print('PLAYING PRISONERS DILLEMA')
     elif game == 3:
-        actions, payoff_matrices, action_count, beliefs = battle_of_sexes_init
+        actions, payoff_matrices, action_count, beliefs = battle_of_sexes_init()
+        print('PLAYING BATTLE OF SEXES')
+    else:
+        actions, payoff_matrices, action_count, beliefs = matching_pennies_init()
+        print('PLAYING MATCHING PENNIES')
 
-    max_iters = 10
+
+    max_iters = 100
     # n * m matrix, where n iterations and m tuples represetning number of agents. 
     # Each tuple m is the mixed strategy (probability of actions) of each agent m at iteration n 
     strategies = [beliefs.tolist()]
@@ -218,9 +204,6 @@ def main():
         # update their mixed strategy/beliefs based on their action
         beliefs[0] = update_beliefs(actions, action_count[1])
         beliefs[1]  = update_beliefs(actions, action_count[0])
-        print(action_count)
-        print("===\t\t", beliefs[0], beliefs[1], beliefs, best_actions, '===')
-        print("at ", i, "best actions are ", best_actions)
         # keep beliefs and actions in each iteration for computing convergence
         strategies.append(beliefs.tolist())
         moves.append(best_actions)
@@ -228,9 +211,44 @@ def main():
         
     ### PLOT
     print("PLOTTING")
-    print(moves)
-    print("and")
-    print(strategies)
-    print(pd.DataFrame(moves, columns=["Action_agent1", "Action_agent2"]).expanding())
+    moves = pd.DataFrame(moves, columns=["Action_agent1", "Action_agent2"])
+    
+    fig, (sub1, sub2) = plt.subplots(2,1)
+    fig.subplots_adjust(hspace=0.5)
+    # for each agent plot its mixed strategy
+    for i, subplot in enumerate([sub1, sub2]):
+        probs = [poli[i] for poli in strategies]
+        subplot.set(xlabel='Iterations', ylabel='Probability',title=f'Agent{i} empirical frequency of strategies, stages={len(probs)}')
+        s0 = [sublist[0] for sublist in probs]
+        s1 = [sublist[1] for sublist in probs]
+        subplot.plot(list(range(0,len(probs))), s0, linewidth=1.5, label="s0 = H", color="g")
+        subplot.plot(list(range(0,len(probs))), s1, linewidth=1.5, label="s1 = T", color="b")
+        subplot.legend()
+
+        subplot.set_ylim(0, 1)
+    plt.show()
+
+    #fig, ax = plt.subplots(figsize=(8, 5))
+    #ax.set_prop_cycle('color', ['b', 'g'])
+    #for x in series:
+    #    ax.plot(x[:, 0], linewidth=2)
+    #ax.set_ylim(0, 1)
+    #plt.show()
+#
+    ## Plot Agent 1
+    #ax1.set(xlabel='Number of iterations', ylabel='Probability',title='Agent-1 strategy through iterations')
+    #ax1.plot(list(range(0, max_iters)), agent1_action1, linewidth=1.5, label="Probability of Action 1", color="#348ABD")
+    #ax1.plot(list(range(0, max_iters)), agent1_action2, linewidth=1.5, label="Probability of Action 2", color="#A60628")
+    #ax1.legend()
+    #plt.show()
         
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--game", help="choose which game to play. Range [1-3]")
+    args = parser.parse_args()
+    game = args.game
+    # check if game option given, default matching pennies
+    if game is None:
+        game = 1
+    main(game)
