@@ -1,46 +1,18 @@
 # https://github.com/esalonico/seminar-learning-in-games-ss23/blob/main/fictitious-play.ipynb
 # This is a fictitious play implementation of some games
 # All should be repeated with mutiple agents
-# zero-sum not mandatory
 
 # In fictitious play, the agent knows the opponent's strategy
 # and plays best response to it
 
-# To see if we have converged to Nahs equilibrium,
-# keep track of each agents strategies played
+# To see if we have converged to Nash equilibrium,
+# keep track of each agents empirical frequency of strategies played
 
 # GAMES:
 # 1. Matching Pennies: competitive, mixed strategies, zero-sum ( + stochastic version with coin toss)
 # 2. Prisoner's Dillema: zero-sum, 1 pure Nash
 # 3. Battle-of-sexes: cooperative, 2 pure Nash, 1 mixed
 # 4. (Left-Right): pure cooperative, 2 pure Nash, 1 mixed
-#
-#   #################################
-#   #    1. Matching Pennies        # 
-#   #################################
-#   competitive, mixed strategies, zero-sum ( + stochastic version with coin toss)
-#
-#            H         T
-#        ###################
-#    H   # (1, -1)  (-1, 1)#
-#    T   # (-1, 1)  (1, -1)#
-#        ###################
-#        
-#        Agent's' action goeas by row
-#        Opponent's by column
-#        
-#        Empirical distribution should CONVERGE to (0.5, 0.5)
-#        and thus to Nash equilibrium
-#        
-#        Even if payoff is given, the output is random (the penny state is random),
-#        no matter the agents' choice
-#        
-#        1 NE at (0.5, 0.5)
-#       
-#       -> extra : Rock-paper-Scissor: general-sum
-#
-
-
 # Also try with 3-players
 
 import numpy as np
@@ -100,9 +72,9 @@ INITIALIZATION OF GAMES
         no matter the agents' choice
         
         1 NE at (0.5, 0.5)
+        -> extra : Rock-paper-Scissor: general-sum
 """
 def matching_pennies_init():
-    # actions
     actions = {0: "H", 1: "T"}
     # reward
     payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
@@ -111,11 +83,6 @@ def matching_pennies_init():
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
-
-    sums = [0, 0]
-    for indx, player_actions in enumerate(action_count):
-        sums[indx] = sum(player_actions)
-        #sum2 += action_count[1][action]
 
     # initialise beliefs with mixed strategy of each agents
     # each row is the mixed strategy/ probability of all actions of the agent
@@ -127,9 +94,7 @@ def matching_pennies_init():
     return actions, payoff_matrices, action_count, beliefs
 
 def prisoners_dillema_init():
-    # actions
     actions = {0: "H", 1: "T"}
-    # reward
     payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
     payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
@@ -137,15 +102,7 @@ def prisoners_dillema_init():
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
 
-    sums = [0, 0]
-    for indx, player_actions in enumerate(action_count):
-        sums[indx] = sum(player_actions)
-        #sum2 += action_count[1][action]
-
-    # initialise beliefs with mixed strategy of each agents
-    # each row is the mixed strategy/ probability of all actions of the agent
-    # empirical_distribution
-    # P(a) = w(a)/SUM(w(a')), probability of opponent playing action a and a' all actions (includiing a)
+    
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
     beliefs = np.array(([1.5, 2], [2, 1.5]))
 
@@ -162,15 +119,6 @@ def battle_of_sexes_init():
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
 
-    sums = [0, 0]
-    for indx, player_actions in enumerate(action_count):
-        sums[indx] = sum(player_actions)
-        #sum2 += action_count[1][action]
-
-    # initialise beliefs with mixed strategy of each agents
-    # each row is the mixed strategy/ probability of all actions of the agent
-    # empirical_distribution
-    # P(a) = w(a)/SUM(w(a')), probability of opponent playing action a and a' all actions (includiing a)
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
     beliefs = np.array(([1.5, 2], [2, 1.5]))
 
@@ -227,21 +175,6 @@ def main(game):
 
         subplot.set_ylim(0, 1)
     plt.show()
-
-    #fig, ax = plt.subplots(figsize=(8, 5))
-    #ax.set_prop_cycle('color', ['b', 'g'])
-    #for x in series:
-    #    ax.plot(x[:, 0], linewidth=2)
-    #ax.set_ylim(0, 1)
-    #plt.show()
-#
-    ## Plot Agent 1
-    #ax1.set(xlabel='Number of iterations', ylabel='Probability',title='Agent-1 strategy through iterations')
-    #ax1.plot(list(range(0, max_iters)), agent1_action1, linewidth=1.5, label="Probability of Action 1", color="#348ABD")
-    #ax1.plot(list(range(0, max_iters)), agent1_action2, linewidth=1.5, label="Probability of Action 2", color="#A60628")
-    #ax1.legend()
-    #plt.show()
-        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
