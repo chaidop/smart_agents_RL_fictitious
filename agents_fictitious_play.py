@@ -9,9 +9,9 @@
 # keep track of each agents empirical frequency of strategies played
 
 # GAMES:
-# 1. Matching Pennies: competitive, mixed strategies, zero-sum ( + stochastic version with coin toss)
+# 1. Matching Pennies:  pure competitive, mixed strategies, zero-sum ( + stochastic version with coin toss)
 # 2. Prisoner's Dillema: zero-sum, 1 pure Nash
-# 3. Battle-of-sexes: cooperative, 2 pure Nash, 1 mixed
+# 3. Battle-of-sexes: mixed cooperative-competitive, 2 pure Nash, 1 mixed
 # 4. (Left-Right): pure cooperative, 2 pure Nash, 1 mixed
 # Also try with 3-players
 
@@ -74,15 +74,22 @@ INITIALIZATION OF GAMES
         1 NE at (0.5, 0.5)
         -> extra : Rock-paper-Scissor: general-sum
 """
-def matching_pennies_init():
+def matching_pennies_init(advanced=False):
     actions = {0: "H", 1: "T"}
-    # reward
-    payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
-    payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
+    # Advanced mode is Rock-Papers-Scissors
+    if advanced:
+        payoff_matrix_agent1 = np.array([[0, -1, 1], [1, 0, -1], [-1, 1, 0]])
+        payoff_matrix_agent2 = np.array([[0, 1, -1], [-1, 0, 1], [-1, 1, 0]])
+    else:   
+        payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
+        payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
-    action_count = [[0,1], [0,1]]
+    if advanced:
+        action_count = [[0, 1, 0], [0, 1, 0]]
+    else:
+        action_count = [[0,1], [0,1]]
 
     # initialise beliefs with mixed strategy of each agents
     # each row is the mixed strategy/ probability of all actions of the agent
@@ -94,9 +101,9 @@ def matching_pennies_init():
     return actions, payoff_matrices, action_count, beliefs
 
 def prisoners_dillema_init():
-    actions = {0: "H", 1: "T"}
-    payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
-    payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
+    actions = {0: "Silent", 1: "Betray"}
+    payoff_matrix_agent1 = np.array([[-1, -3], [0, -2]])
+    payoff_matrix_agent2 = np.array([[-1, -3], [0, -2]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
@@ -104,27 +111,27 @@ def prisoners_dillema_init():
 
     
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
-    beliefs = np.array(([1.5, 2], [2, 1.5]))
 
     return actions, payoff_matrices, action_count, beliefs
 
 def battle_of_sexes_init():
     # actions
-    actions = {0: "H", 1: "T"}
+    actions = {0: "Opera", 1: "Football"}
     # reward
-    payoff_matrix_agent1 = np.array([[1, -1], [-1, 1]])
-    payoff_matrix_agent2 = np.array([[-1, 1], [1, -1]])
+    payoff_matrix_agent1 = np.array([[3, 2], [0, 2]])
+    payoff_matrix_agent2 = np.array([[2, 0], [0, 3]])
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
 
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
-    beliefs = np.array(([1.5, 2], [2, 1.5]))
 
     return actions, payoff_matrices, action_count, beliefs
 
 def main(game):
+    print(game)
+    game = int(game)
     if game == 2:
         actions, payoff_matrices, action_count, beliefs = prisoners_dillema_init()
         print('PLAYING PRISONERS DILLEMA')
@@ -163,14 +170,19 @@ def main(game):
     
     fig, (sub1, sub2) = plt.subplots(2,1)
     fig.subplots_adjust(hspace=0.5)
+    sub1.set_ylim(-0.8, 1.2)
+    sub2.set_ylim(-0.8, 1.2) 
+    sub1.grid(True)
+    sub2.grid(True)
     # for each agent plot its mixed strategy
+    colors = ["g", "b", "r"]
     for i, subplot in enumerate([sub1, sub2]):
         probs = [poli[i] for poli in strategies]
-        subplot.set(xlabel='Iterations', ylabel='Probability',title=f'Agent{i} empirical frequency of strategies, stages={len(probs)}')
-        s0 = [sublist[0] for sublist in probs]
-        s1 = [sublist[1] for sublist in probs]
-        subplot.plot(list(range(0,len(probs))), s0, linewidth=1.5, label="s0 = H", color="g")
-        subplot.plot(list(range(0,len(probs))), s1, linewidth=1.5, label="s1 = T", color="b")
+        subplot.set(xlabel='Iterations', ylabel='Probability',title=f'Agent{i} empirical frequency of strategies, stages={len(probs) - 1}')
+        print(len(probs[0]))
+        for action in range(0, len(probs[0])):
+            action_probs = [sublist[action] for sublist in probs]
+            subplot.plot(list(range(0,len(probs))), action_probs, linewidth=1.5, label=f"s{action} = {actions[action]}", color=colors[action])
         subplot.legend()
 
         subplot.set_ylim(0, 1)
