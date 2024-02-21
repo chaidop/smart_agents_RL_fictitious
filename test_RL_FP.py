@@ -275,7 +275,7 @@ def main(game, advanced, agents):
         print('PLAYING MATCHING PENNIES')
 
 
-    max_iters = 100
+    max_iters = 1000
     
     agents = int(agents)
     if agents == 1:
