@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 ## --- GAMES ----------------------------
-def matching_pennies_init(advanced=False):
+def matching_pennies_init(advanced=False, agents=2):
     
     # Advanced mode is Rock-Papers-Scissors
     if advanced:
@@ -25,7 +25,8 @@ def matching_pennies_init(advanced=False):
     else:
         action_count = [[0,1], [0,1]]
     #action_count = [[1.5, 2], [2, 1.5]]
-    
+    if agents == 1:
+        action_count =  [[0.5, 0.5], [0.5, 0.5]]
     # initialise beliefs with mixed strategy of each agents
     # each row is the mixed strategy/ probability of all actions of the agent
     # empirical_distribution
@@ -54,7 +55,7 @@ def matching_pennies_init(advanced=False):
         1 pure Nash: 
             Betray-Betray
 '''
-def prisoners_dillema_init():
+def prisoners_dillema_init(agents=2):
     actions = {0: "Silent", 1: "Betray"}
     payoff_matrix_agent1 = np.array([[-1, -3], [0, -2]])
     payoff_matrix_agent2 = np.array([[-1, -3], [0, -2]])
@@ -62,8 +63,10 @@ def prisoners_dillema_init():
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[1,0], [1,0]]
+    ### if agents =2, (FP vs RL), take into consideration the 0.5 0.5 policy of the RL agent
+    if agents == 1:
+        action_count =  [[0.5, 0.5], [0.5, 0.5]]
 
-    
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
 
     return actions, payoff_matrices, action_count, beliefs
@@ -84,7 +87,7 @@ def prisoners_dillema_init():
         1 mixed Nash:
             -> Opera (3/5) - Opera (2/5)
 '''
-def battle_of_sexes_init():
+def battle_of_sexes_init(agents=2):
     # actions
     actions = {0: "Opera", 1: "Movies"}
     # reward
@@ -94,12 +97,13 @@ def battle_of_sexes_init():
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [1,0]]
-
+    if agents == 1:
+        action_count =  [[0.5, 0.5], [0.5, 0.5]]
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
 
     return actions, payoff_matrices, action_count, beliefs
 
-def left_right():
+def left_right(agents=2):
     # actions
     actions = {0: "L", 1: "R"}
     # reward
@@ -109,7 +113,8 @@ def left_right():
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[1,0], [0.5, 0.5]]
-
+    if agents == 1:
+        action_count =  [[0.5, 0.5], [0.5, 0.5]]
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
 
     return actions, payoff_matrices, action_count, beliefs
@@ -257,16 +262,16 @@ def main(game, advanced, agents):
     print(game, advanced, agents)
     game = int(game)
     if game == 2:
-        actions, payoff_matrices, action_count, beliefs = prisoners_dillema_init()
+        actions, payoff_matrices, action_count, beliefs = prisoners_dillema_init(agents)
         print('PLAYING PRISONERS DILLEMA')
     elif game == 3:
-        actions, payoff_matrices, action_count, beliefs = battle_of_sexes_init()
+        actions, payoff_matrices, action_count, beliefs = battle_of_sexes_init(agents)
         print('PLAYING BATTLE OF SEXES')
     elif game == 4:
-        actions, payoff_matrices, action_count, beliefs = left_right()
+        actions, payoff_matrices, action_count, beliefs = left_right(agents)
         print('PLAYING LEFT-RIGHT')
     else:
-        actions, payoff_matrices, action_count, beliefs = matching_pennies_init(advanced)
+        actions, payoff_matrices, action_count, beliefs = matching_pennies_init(advanced, agents)
         print('PLAYING MATCHING PENNIES')
 
 
@@ -274,11 +279,14 @@ def main(game, advanced, agents):
     
     agents = int(agents)
     if agents == 1:
-        moves, strategies = test_FPvRL(actions, payoff_matrices, action_count, beliefs, max_iters)
+        moves, strategies = test_FPvRL(actions, payoff_matrices, action_count, beliefs[1], max_iters)
+        agent_type = ['RL Agent 1', 'FP Agent 2']
     elif agents == 2:
         moves, strategies = test_FPvFP(actions, payoff_matrices, action_count, beliefs, max_iters)
+        agent_type = ['FP Agent 1', 'FP Agent 2']
     else:
         moves, strategies = test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iters)
+        agent_type = ['RL Agent 1', 'RL Agent 2']
         
     
         
@@ -297,7 +305,7 @@ def main(game, advanced, agents):
     colors = ["g", "b", "r"]
     for i, subplot in enumerate([sub1, sub2]):
         probs = [poli[i] for poli in strategies]
-        subplot.set(xlabel='Iterations', ylabel='Probability',title=f'Agent{i} empirical frequency of strategies, stages={len(probs) - 1}')
+        subplot.set(xlabel='Iterations', ylabel='Probability',title=f'{agent_type[i]} empirical frequency of strategies, stages={len(probs) - 1}')
         print(len(probs[0]))
         for action in range(0, len(probs[0])):
             action_probs = [sublist[action] for sublist in probs]
@@ -308,40 +316,37 @@ def main(game, advanced, agents):
     plt.show()
 
 ### -------------------- DIFFERENT AGENTS TESTS
-def test_FPvRL():
-    pass
-'''
-
-    
+def test_FPvRL(actions, payoff_matrices, action_count, belief, max_iters):
     agent1 = MinimaxAgent(epsilon=0.3, learning_rate=1.0, gamma=0.9, player_id=1, payoffs = payoff_matrices[0], actions=actions)
-
-    strategies = [[agent1.P,agent2.P]]
+    #make fp believe rl played 0.5 both actions
+    strategies = [[agent1.P.tolist(), belief.tolist()]]
     curr_episode = 0
-    for curr_episode in range(max_iter):
+    moves = []
+    for curr_episode in range(max_iters):
+        # take action
         action1 = agent1.take_action()
-        action2 = compute_expect_utility(actions, beliefs[1], payoff_matrices[1])
+        action2 = compute_expect_utility(actions, belief, payoff_matrices[1])
 
+        # update
         rew1 = agent1.learn(action=action1, opponent=action2)
-        rew2 = agent2.learn(action=action2, opponent=action1)
+        action_count[0][action1] += 1
+        action_count[1][action2] += 1
+        belief  = update_beliefs(actions, action_count[0])
 
         agent1.update_Q(action=action1, opponent=action2, reward=rew1)
         agent1.update_P(opponent=action2)
         agent1.update_V()
 
-        agent2.update_Q(action=action2, opponent=action1, reward=rew2)
-        agent2.update_P(opponent=action1)
-        agent2.update_V()
-
-        strategies.append([agent1.P,agent2.P])
+        strategies.append([agent1.P,belief])
+        moves.append([action1, action2])
 
         if curr_episode % 100 == 0:
             agent1.learning_rate *= 0.8
-            agent2.learning_rate *= 0.8
 
         curr_episode += 1
 
-    return strategies, strategies
-'''
+    return moves, strategies
+
 def test_FPvFP(actions, payoff_matrices, action_count, beliefs, max_iters):
     # n * m matrix, where n iterations and m tuples represetning number of agents. 
     # Each tuple m is the mixed strategy (probability of actions) of each agent m at iteration n 
@@ -370,6 +375,7 @@ def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):
 
     strategies = [[agent1.P,agent2.P]]
     curr_episode = 0
+    moves = []
     for curr_episode in range(max_iter):
         action1 = agent1.take_action()
         action2 = agent2.take_action()
@@ -386,6 +392,7 @@ def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):
         agent2.update_V()
 
         strategies.append([agent1.P,agent2.P])
+        moves.append([action1, action2])
 
         if curr_episode % 100 == 0:
             agent1.learning_rate *= 0.8
@@ -404,7 +411,7 @@ def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):
     print(agent1.V*0.1, agent2.V*0.1)
     print(agent2.V*0.1 + agent1.V*0.1)
 
-    return strategies, strategies
+    return moves, strategies
 
 ### --------------------------------
 
@@ -435,5 +442,5 @@ if __name__ == '__main__':
         agents = 1
     ## for debugging
     #game = 1
-    #agents = 3
+    #agents = 1
     main(game, advanced, agents)
