@@ -26,7 +26,7 @@ def matching_pennies_init(agents=2):
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
     action_count = [[0,1], [0,1]]
-    #action_count = [[1.5, 2], [2, 1.5]]
+    action_count = [[1.5, 2], [2, 1.5]]
     if agents == 1:
         action_count =  [[0.5, 0.5], [0.5, 0.5]]
     # initialise beliefs with mixed strategy of each agents
@@ -112,7 +112,7 @@ def rock_paper_scissor_3_player():
     payoff_matrix_agentP = np.array([[2, 0.5, 0], [0.5, 0, -1], [0, -1, -1]])
     payoff_matrix_agentS = np.array([[-1, 0, -1], [0, 2, 0.5], [-1, 0.5, 0]])
     payoff_matrices = np.array((payoff_matrix_agentR, payoff_matrix_agentP, payoff_matrix_agentS))
-    action_count = [[1000, 0, 0], [0, 1, 0], [0, 0, 1]]
+    action_count = [[1, 0, 0], [1, 0, 0], [1, 0, 0]]
     
     # each palyer keeps beliefs for every other opponent
     # 2 x 3 matrix
@@ -195,6 +195,20 @@ def battle_of_sexes_init(agents=2):
 
     return actions, payoff_matrices, action_count, beliefs
 
+'''
+#################################
+#    4. Left or Right        # 
+#################################
+            R         L
+        ###################
+    R   # (1, 1)  (0, 0)#
+    L   # (0, 0)  (1, 1)#
+        ###################
+
+        2 pure Nash: 
+            -> R, R
+            -> L, L
+'''
 def left_right(agents=2):
     # actions
     actions = {0: "L", 1: "R"}
@@ -204,7 +218,7 @@ def left_right(agents=2):
     payoff_matrices = [payoff_matrix_agent1, payoff_matrix_agent2]
     # count of H and T played by each agent
     # for state 0 lets assume both have played Tails
-    action_count = [[1,0], [0.5, 0.5]]
+    action_count = [[1,0], [0, 1]]
     if agents == 1:
         action_count =  [[0.5, 0.5], [0.5, 0.5]]
     beliefs = np.array(([action_count[1][0]/sum(action_count[1]), action_count[1][1]/sum(action_count[1])], [action_count[0][0]/sum(action_count[0]), action_count[0][1]/sum(action_count[0])]))
@@ -273,12 +287,35 @@ class MinimaxAgent():
         cons = ({'type': 'eq', 'fun': lambda x: 1.0 - np.sum(x)})
 
 
-        if self.player_id == 1:
-            f = lambda  x: min(np.matmul(x.T,self.Q))
-        else:
-            f = lambda  x: min(np.matmul(x.T,self.Q.T))
-
+        #if self.player_id == 1:
+        f = lambda  x: min(np.matmul(x.T,self.Q))
+        #else:
+        #    f = lambda  x: min(np.matmul(x.T,self.Q.T))
+        
         self.P = minimize(fun=lambda x: -f(x), x0=np.array([0., 0.]), constraints=cons, bounds=bnds).x
+        '''
+        c = np.zeros(self.numActionsA + 1)
+        c[0] = -1
+        A_ub = np.ones((self.numActionsB, self.numActionsA + 1))
+        A_ub[:, 1:] = -self.Q[state].T
+        b_ub = np.zeros(self.numActionsB)
+        A_eq = np.ones((1, self.numActionsA + 1))
+        A_eq[0, 0] = 0
+        b_eq = [1]
+        bounds = ((None, None),) + ((0, 1),) * self.numActionsA
+
+        res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds)
+
+        if res.success:
+            self.pi[state] = res.x[1:]
+        elif not retry:
+            return self.updatePolicy(state, retry=True)
+        else:
+            print("Alert : %s" % res.message)
+            return self.V[state]
+
+        return res.x[0]
+        '''
 
     def update_V(self):
 
@@ -397,8 +434,8 @@ def main(game, agents):
             moves, strategies = test_FPvFP(actions, payoff_matrices, action_count, beliefs, max_iters)
             agent_type = ['FP Agent 1', 'FP Agent 2']
     else:
-        moves, strategies = test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iters)
-        agent_type = ['RL Agent 1', 'RL Agent 2']
+        moves, strategies, agentse, agentslr, agentsg = test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iters)
+        agent_type = [f'RL Agent 1 e={agentse[0]}, lr={agentslr[0]}, g={agentsg[0]}', f'RL Agent 2 e={agentse[1]}, lr={agentslr[1]}, g={agentsg[1]}']
         
     
         
@@ -410,15 +447,15 @@ def main(game, agents):
     moves = pd.DataFrame(moves, columns=["Action_agent1", "Action_agent2"])
     if game == 5:
         fig, (sub1, sub2, sub3) = plt.subplots(3,1)
-        sub3.set_ylim(-0.8, 1.2) 
+        sub3.set_ylim(-0.2, 1.2) 
         sub3.grid(True)
         subgraph_list = [sub1, sub2, sub3]
     else:
         fig, (sub1, sub2) = plt.subplots(2,1)
         subgraph_list = [sub1, sub2]
     fig.subplots_adjust(hspace=0.5)
-    sub1.set_ylim(-0.8, 1.2)
-    sub2.set_ylim(-0.8, 1.2) 
+    sub1.set_ylim(-0.2, 1.2)
+    sub2.set_ylim(-0.2, 1.2) 
     sub1.grid(True)
     sub2.grid(True)
     # for each agent plot its mixed strategy
@@ -543,8 +580,10 @@ def test_FPvFP(actions, payoff_matrices, action_count, beliefs, max_iters):
     return moves, strategies
 
 def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):    
-    agent1 = MinimaxAgent(epsilon=0.3, learning_rate=1.0, gamma=0.9, player_id=1, payoffs = payoff_matrices[0], actions=actions)
-    agent2 = MinimaxAgent(epsilon=0.3, learning_rate=1.0, gamma=0.9, player_id=2, payoffs = payoff_matrices[1], actions=actions)
+    agent1 = MinimaxAgent(epsilon=0.3, learning_rate=1, gamma=0.9, player_id=1, payoffs = payoff_matrices[0], actions=actions)
+    agent2 = MinimaxAgent(epsilon=0.3, learning_rate=1, gamma=0.9, player_id=2, payoffs = payoff_matrices[1], actions=actions)
+    initlr1 = agent1.learning_rate
+    initlr2 = agent2.learning_rate
 
     strategies = [[agent1.P,agent2.P]]
     curr_episode = 0
@@ -567,10 +606,11 @@ def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):
         strategies.append([agent1.P,agent2.P])
         moves.append([action1, action2])
 
-        if curr_episode % 50 == 0:
-            agent1.learning_rate *= 0.8
-            agent2.learning_rate *= 0.8
-
+        #if curr_episode % 50 == 0:
+        #    agent1.learning_rate *= 0.8
+        #    agent2.learning_rate *= 0.8
+        agent1.learning_rate = 1/(curr_episode+1)
+        agent2.learning_rate = 1/(curr_episode+1)
         curr_episode += 1
 
     ### OUTCOME
@@ -584,7 +624,7 @@ def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):
     print(agent1.V*0.1, agent2.V*0.1)
     print(agent2.V*0.1 + agent1.V*0.1)
 
-    return moves, strategies
+    return moves, strategies, [agent1.epsilon, agent2.epsilon ], [initlr1, initlr2 ], [agent1.gamma, agent2.gamma ]
 
 ### --------------------------------
 
@@ -605,4 +645,4 @@ if __name__ == '__main__':
     ## for debugging
     #game = 6
     #agents = 2
-    main(game, agents)
+    main(game, agents) 
