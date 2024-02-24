@@ -286,12 +286,7 @@ class MinimaxAgent():
         bnds = ((0., 1.), (0., 1.))
         cons = ({'type': 'eq', 'fun': lambda x: 1.0 - np.sum(x)})
 
-
-        #if self.player_id == 1:
         f = lambda  x: min(np.matmul(x.T,self.Q))
-        #else:
-        #    f = lambda  x: min(np.matmul(x.T,self.Q.T))
-        
         self.P = minimize(fun=lambda x: -f(x), x0=np.array([0., 0.]), constraints=cons, bounds=bnds).x
         '''
         c = np.zeros(self.numActionsA + 1)
@@ -318,12 +313,7 @@ class MinimaxAgent():
         '''
 
     def update_V(self):
-
-        if self.player_id == 1:
-            f = lambda  x: min(np.matmul(x.T,self.Q))
-        else:
-            f = lambda  x: min(np.matmul(x.T,self.Q.T))
-
+        f = lambda  x: min(np.matmul(x.T,self.Q))
         self.V = f(self.P)
 
 def update_prob():
