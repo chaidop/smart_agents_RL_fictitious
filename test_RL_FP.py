@@ -259,19 +259,16 @@ class MinimaxAgent():
 
     def take_action(self):
         ## if probability epsilon, then take at random, else take action with policy distribution
-        
-        #if np.random.rand() < self.epsilon:  # Exploration: choose random action
-        #    return np.random.choice(self.n_actions)
-        #elif self.policy is not None:  # Use external policy if available
-        #    action_probs = self.policy[state]
-        #    return np.random.choice(np.arange(self.n_actions), p=action_probs)
-        exploration_chance = random.uniform(0, 1)
-        if exploration_chance < self.epsilon:
-            # Exploration: randomly choose between 0 and 1
-            return random.choice([0, 1])
+        if random.random() < self.epsilon:
+        #Randomly choose between 0 and 1 with equal probability if epsilon condition is met
+           return random.choice([0, 1])
         else:
-            # Exploitation: choose based on probabilities in P
-            return random.choices([0, 1], weights=(self.P[0] , self.P[1]))[0]
+            # Use self.P for probabilities if epsilon condition is not met
+            action_probabilities = [self.P[0] , self.P[1] ]
+            if random.random()  < action_probabilities[0]:
+                return 0
+            else:
+                return 1
 
     def learn(self, action, opponent):
         return self.payoffs[action][opponent]
@@ -286,34 +283,28 @@ class MinimaxAgent():
         self.Q[action][opponent] = (1 - self.learning_rate) * self.Q[action][opponent] + self.learning_rate * (reward + self.gamma * self.V)
 
     def update_P(self, opponent):
+        # solve the linear programm for minimization
+        # works better than linprog --> need to check
         bounds = ((0., 1.), (0., 1.))
         constraints = ({'type': 'eq', 'fun': lambda x: 1.0 - np.sum(x)})
 
-        worst_reward = lambda  x: min(np.matmul(x.T,self.Q))
-        self.P = minimize(fun=lambda x: -worst_reward(x), x0=np.array([0., 0.]), constraints=constraints, bounds=bounds).x
-        
+        res = minimize(fun=lambda x: -self.get_min_prob(x), x0=np.array([0., 0.]), constraints=constraints, bounds=bounds)
+        self.P = res.x
         '''
-        c = np.zeros(self.numActionsA + 1)
+        from scipy.optimize import linprog
+        numActions = len(self.actions)
+        c = np.zeros(numActions + 1)
         c[0] = -1
-        A_ub = np.ones((self.numActionsB, self.numActionsA + 1))
-        A_ub[:, 1:] = -self.Q[state].T
-        b_ub = np.zeros(self.numActionsB)
-        A_eq = np.ones((1, self.numActionsA + 1))
+        A_ub = np.ones((numActions, numActions + 1))
+        A_ub[:, 1:] = -self.Q.T
+        b_ub = np.zeros(numActions)
+        A_eq = np.ones((1, numActions + 1))
         A_eq[0, 0] = 0
         b_eq = [1]
-        bounds = ((None, None),) + ((0, 1),) * self.numActionsA
+        bounds = ((None, None),) + ((0, 1),) * numActions
 
-        res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds)
-
-        if res.success:
-            self.pi[state] = res.x[1:]
-        elif not retry:
-            return self.updatePolicy(state, retry=True)
-        else:
-            print("Alert : %s" % res.message)
-            return self.V[state]
-
-        return res.x[0]
+        res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds).x[1:]
+        self.P = res
         '''
 
     def update_V(self):
@@ -603,11 +594,11 @@ def test_RLvRL(actions, payoff_matrices, action_count, beliefs, max_iter):
         strategies.append([agent1.P,agent2.P])
         moves.append([action1, action2])
 
-        #if curr_episode % 50 == 0:
-        #    agent1.learning_rate *= 0.8
-        #    agent2.learning_rate *= 0.8
-        agent1.learning_rate = 1/(curr_episode+1)
-        agent2.learning_rate = 1/(curr_episode+1)
+        if curr_episode % 50 == 0:
+            agent1.learning_rate *= 0.8
+            agent2.learning_rate *= 0.8
+        #agent1.learning_rate = 1/(curr_episode+1)
+        #agent2.learning_rate = 1/(curr_episode+1)
         curr_episode += 1
 
     ### OUTCOME
