@@ -265,10 +265,13 @@ class MinimaxAgent():
         #elif self.policy is not None:  # Use external policy if available
         #    action_probs = self.policy[state]
         #    return np.random.choice(np.arange(self.n_actions), p=action_probs)
-        if random.choices([0, 1], weights=(self.epsilon * 100, (1 - self.epsilon) * 100))[0] == 0:
+        exploration_chance = random.uniform(0, 1)
+        if exploration_chance < self.epsilon:
+            # Exploration: randomly choose between 0 and 1
             return random.choice([0, 1])
         else:
-            return random.choices([0, 1], weights=(self.P[0] * 100, self.P[1] * 100))[0]
+            # Exploitation: choose based on probabilities in P
+            return random.choices([0, 1], weights=(self.P[0] , self.P[1]))[0]
 
     def learn(self, action, opponent):
         return self.payoffs[action][opponent]
@@ -283,11 +286,12 @@ class MinimaxAgent():
         self.Q[action][opponent] = (1 - self.learning_rate) * self.Q[action][opponent] + self.learning_rate * (reward + self.gamma * self.V)
 
     def update_P(self, opponent):
-        bnds = ((0., 1.), (0., 1.))
-        cons = ({'type': 'eq', 'fun': lambda x: 1.0 - np.sum(x)})
+        bounds = ((0., 1.), (0., 1.))
+        constraints = ({'type': 'eq', 'fun': lambda x: 1.0 - np.sum(x)})
 
-        f = lambda  x: min(np.matmul(x.T,self.Q))
-        self.P = minimize(fun=lambda x: -f(x), x0=np.array([0., 0.]), constraints=cons, bounds=bnds).x
+        worst_reward = lambda  x: min(np.matmul(x.T,self.Q))
+        self.P = minimize(fun=lambda x: -worst_reward(x), x0=np.array([0., 0.]), constraints=constraints, bounds=bounds).x
+        
         '''
         c = np.zeros(self.numActionsA + 1)
         c[0] = -1
@@ -313,8 +317,11 @@ class MinimaxAgent():
         '''
 
     def update_V(self):
-        f = lambda  x: min(np.matmul(x.T,self.Q))
-        self.V = f(self.P)
+        self.V = self.get_min_prob(self.P)
+
+    def get_min_prob(self, x):
+        return min(np.matmul(x.T,self.Q))
+
 
 def update_prob():
     ## the probability of playing an action in each stage
